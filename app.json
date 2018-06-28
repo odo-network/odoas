@@ -1,0 +1,100 @@
+{
+  "apps": [
+    {
+      "name": "redis",
+      "interpreter": "/usr/local/bin/redis-server",
+      "script": "redis.conf",
+      "watch": false,
+      "cwd": "~/odows/",
+      "restart_delay": 2000,
+      "env": {},
+      "env_test": {},
+      "env_staging": {},
+      "env_production": {},
+      "kill_timeout": 2000,
+      "listen_timeout": 2000,
+      "wait_ready": false,
+      "out_file": "~/odows/logs/odows-redis.log",
+      "error_file": "~/odows/logs/odows-redis.error.log"
+    },
+    {
+      "name": "ws-server",
+      "script": "dist/apps/server/index.js",
+      "watch": false,
+      "exec_mode": "cluster",
+      "instance": "max",
+      "cwd": "~/odows/",
+      "restart_delay": 5000,
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": 8090
+      },
+      "env_test": {
+        "NODE_ENV": "production",
+        "PORT": 8090
+      },
+      "env_staging": {
+        "NODE_ENV": "production",
+        "PORT": 8090
+      },
+      "env_production": {
+        "NODE_ENV": "production",
+        "PORT": 8090
+      },
+      "kill_timeout": 6000,
+      "listen_timeout": 6000,
+      "wait_ready": true,
+      "out_file": "~/odows/logs/ws-server.log",
+      "error_file": "~/odows/logs/ws-server.error.log"
+    },
+    {
+      "name": "controls",
+      "script": "dist/apps/controls/index.js",
+      "watch": false,
+      "cwd": "/home/sal/v2/source",
+      "restart_delay": 5000,
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "env_test": {
+        "NODE_ENV": "production"
+      },
+      "env_staging": {
+        "NODE_ENV": "production"
+      },
+      "env_production": {
+        "NODE_ENV": "production"
+      },
+      "kill_timeout": 6000,
+      "listen_timeout": 6000,
+      "out_file": "~/odows/logs/controls.log",
+      "error_file": "~/odows/logs/controls.error.log"
+    }
+  ],
+  "deploy": {
+    "test": {
+      "user": "root",
+      "host": [""],
+      "ref": "origin/test",
+      "repo": "git@github.com:odo-network/odows.git",
+      "path": "~/odows",
+      "post-deploy": "sh ./internals/scripts/post-deploy.sh test"
+    },
+    "staging": {
+      "user": "root",
+      "host": [""],
+      "ref": "origin/staging",
+      "repo": "git@github.com:odo-network/odows.git",
+      "path": "~/odows",
+      "post-deploy": "sh ./internals/scripts/post-deploy.sh staging"
+    },
+    "production": {
+      "user": "root",
+      "host": [""],
+      "ref": "origin/master",
+      "repo": "git@github.com:odo-network/odows.git",
+      "path": "~/odows",
+      "post-deploy": "sh ./internals/scripts/post-deploy.sh prod"
+    }
+  }
+}

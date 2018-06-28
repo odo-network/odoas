@@ -1,0 +1,49 @@
+{
+  "parser": "babel-eslint",
+  "parserOptions": {
+    "ecmaVersion": 9,
+    "sourceType": "module",
+    "allowImportExportEverywhere": true
+  },
+  "extends": ["eslint:recommended", "airbnb-base", "plugin:flowtype/recommended"],
+  "env": {
+    "node": true
+  },
+  "rules": {
+    "arrow-parens": ["off"],
+    "consistent-return": "off",
+    "import/no-unresolved": "off",
+    "import/no-extraneous-dependencies": "off",
+    "no-console": "off",
+    "no-multi-assign": "off",
+    "promise/param-names": "error",
+    "promise/always-return": "error",
+    "promise/catch-or-return": "error",
+    "promise/no-native": "off",
+    "no-param-reassign": "off",
+    "no-restricted-syntax": "off",
+    "no-constant-condition": "off",
+    "no-confusing-arrow": "off",
+    "no-use-before-define": "off",
+    "import/extensions": "off",
+    "no-continue": "off",
+    "class-methods-use-this": "off",
+    "import/prefer-default-export": "off",
+    "no-underscore-dangle": "off",
+    "flowtype/generic-spacing": "off",
+    "no-unused-expressions": "off",
+    "flowtype/no-unused-expressions": "error",
+    "import/no-duplicates": "off",
+    "import/no-cycle": "off",
+    "max-len": [
+      "error",
+      {
+        "code": 100,
+        "ignoreComments": true,
+        "ignoreStrings": true,
+        "ignoreTemplateLiterals": true
+      }
+    ]
+  },
+  "plugins": ["flowtype", "promise", "import"]
+}
