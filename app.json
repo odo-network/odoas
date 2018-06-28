@@ -78,7 +78,7 @@
       "ref": "origin/test",
       "repo": "git@github.com:odo-network/odoas.git",
       "path": "~/.odoas",
-      "post-deploy": "sh ./internals/scripts/post-deploy.sh test"
+      "post-deploy": "sh internals/scripts/post-deploy.sh test"
     },
     "staging": {
       "user": "root",
@@ -86,7 +86,7 @@
       "ref": "origin/staging",
       "repo": "git@github.com:odo-network/odoas.git",
       "path": "~/.odoas",
-      "post-deploy": "sh ./internals/scripts/post-deploy.sh staging"
+      "post-deploy": "sh internals/scripts/post-deploy.sh staging"
     },
     "production": {
       "user": "root",
@@ -94,7 +94,7 @@
       "ref": "origin/master",
       "repo": "git@github.com:odo-network/odoas.git",
       "path": "~/.odoas",
-      "post-deploy": "sh ./internals/scripts/post-deploy.sh prod"
+      "post-deploy": "sh internals/scripts/post-deploy.sh prod"
     }
   }
 }
