@@ -27,7 +27,7 @@ Out of the box, `odoas` provides metric reporting, extensibility via ["apps"](./
 
 - **Do all my Applications need to be Node.js?**
 
-Nope! [pm2](http://pm2.keymetrics.io/) is capaable of managing many types of applications, not just Node.js.
+Nope! [pm2](http://pm2.keymetrics.io/) is capable of managing many types of applications, not just Node.js.
 
 ## Setup & Configuration
 
