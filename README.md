@@ -40,3 +40,9 @@ yarn deploy:${ODOAS_STAGE}
 If configured appropriately, the command above should handle the deployment, build, and running of your application.
 
 > Your application will be gracefully updated if possible so that your users do not experience any downtime.
+
+## Adding Applications
+
+`odoas` is meant to be a lightweight boilerplate for your Realtime Application's backend infrastructure. It is the interface from your UI layer to your backend layer and can be extended to meet nearly any infrastructure required.
+
+> More Details Coming Soon...
