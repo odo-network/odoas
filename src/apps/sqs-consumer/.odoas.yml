@@ -1,0 +1,5 @@
+# odoas will automatically parse and install any applications 
+# defining a .odoas.yml file.
+
+repo: https://www.github.com/odo-network/odoas-sqs-consumer
+branch: ${ODOAS_STAGE}
