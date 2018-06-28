@@ -1,0 +1,10 @@
+# odoas Applications
+
+Each folder here holds an `odoas` Application. Applications are self-contained stateless containers meant to handle a specific piece of your overall platforms business logic.
+
+## Design Principles
+
+- Stateless
+- Should never matter what applications are running in the cluster.
+- Clearly defined input/output and IPC (Pubsub) mechanisms.
+- Side-effect free (no app should alter the way another app operates).
