@@ -21,7 +21,7 @@ Out of the box, `odoas` provides metric reporting, extensibility via ["apps"](./
 - **[Redis](https://redis.io/)** - An in-memory data structure store, used as a database, cache and message broker. Specifically utilizing the lightweight "pubsub" mechanisms provided.
 - **[PubChan](https://github.com/Dash-OS/pubchan)** - A lightweight, powerful, and flexible Node.js pubsub broker for in-app subscription and channel management.
 - **[nvm](https://github.com/creationix/nvm)** - Node Version Manager is used to reliably maintain the Node.js environment that will run various parts of the application.
-- **[Serverless Framework]**(https://www.serverless.com) - Wherever possible, we utilize FaaS platforms.
+- **[Serverless Framework](https://www.serverless.com)** - Wherever possible, we utilize FaaS platforms.
 
 ## Frequently Asked Questions
 
