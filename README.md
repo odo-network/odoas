@@ -24,3 +24,19 @@ Out of the box, `odoas` provides metric reporting, extensibility via "apps", Web
 ## Setup & Configuration
 
 > Coming Soon...
+
+### Deployment
+
+`odoas` is meant to be run within a 3-stage setup.
+
+- `production` - Your production server clients will connect with.
+- `staging` - A clone of your production server to test before final rollout (and possibly implement A/B Testing/Canary rollouts with).
+- `test` - A test environment which should model your `production`/`staging` environments as closely as possible.
+
+```
+yarn deploy:${ODOAS_STAGE}
+```
+
+If configured appropriately, the command above should handle the deployment, build, and running of your application.
+
+> Your application will be gracefully updated if possible so that your users do not experience any downtime.
