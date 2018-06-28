@@ -20,7 +20,7 @@ export type RChan$Descriptor = {
 };
 
 const getConfig = (config: $Shape<Redis$Options> = {}): Redis$Options => ({
-  path: path.resolve(os.homedir(), '/odows/.ipc.sock'),
+  path: path.resolve(os.homedir(), '/.odoas/ipc.sock'),
   ...config,
 });
 
