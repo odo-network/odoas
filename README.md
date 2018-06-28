@@ -20,3 +20,7 @@ Out of the box, `odoas` provides metric reporting, extensibility via "apps", Web
 - **[UWebSocket](https://github.com/uNetworking/uWebSockets)** - Blazing fast WebSocket and HTTP implementation for clients and servers. Simple, efficient, and lightweight.
 - **[Redis](https://redis.io/)** - An in-memory data structure store, used as a database, cache and message broker. Specifically utilizing the lightweight "pubsub" mechanisms provided.
 - **[PubChan](https://github.com/Dash-OS/pubchan)** - A lightweight, powerful, and flexible Node.js pubsub broker for in-app subscription and channel management.
+
+## Setup & Configuration
+
+> Coming Soon...
