@@ -5,7 +5,6 @@ import type {
   WS$ClientProps,
   WS$ClientState,
   WS$ErrorResponse,
-  WS$ClientIdentities,
   WS$RequestTypes,
   WS$ResponseTypes,
 } from '../types';
@@ -20,61 +19,32 @@ import { trimLeft } from '../utils/string';
 import errors from './errors';
 import response from './response';
 
-import handleRequest, { requests } from '../requests';
+import handleRequest, { hasRoute, handleCleanupClientFromRoutes } from '../routes';
 
 /**
  * When a new WebSocket Client initially connects we capture data from
  * the socket and create a client state object.  This state is only meant
  * to manage the lifecycle of a websocket client and is not used outside
  * of this purpose.
- * @param {uws.Connection} ws
- * @param {WebSocketClient} client
  */
-function getClientInitialState(ws, client): WS$ClientState {
-  const sock = ws._socket;
-  const { remotePort, remoteAddress } = sock;
-  const { servername } = ws.upgradeReq.connection;
-
-  const ip = remoteAddress ? trimLeft(remoteAddress, '::ffff:') : 'unknown';
-
+function getClientInitialState(): WS$ClientState {
   return {
-    ip, // What is the clients Public IP?
-    servername, // What is the clients servername ?
     log: process.env.NODE_ENV !== 'production' || process.env.LOGGING === true,
-    // Headers to be tagged with any HTTP Requests that
-    // we forward.
-    headers: {
-      '$WS-Identity': client.props.identity,
-      '$WS-Server-Name': servername,
-      '$WS-Remote-Address': ip,
-      '$WS-Remote-Port': String(remotePort),
-    },
-    connection: {
-      isAlive: true,
-      connected: true,
-      handshaked: false,
-      disconnecting: false,
-      created: Date.now(),
-    },
-    /* An object describing any identity values
-       associated with a given Websocket Client. */
-    identities: {},
+    isAlive: true,
+    connected: true,
+    handshaked: false,
+    disconnecting: false,
+    created: Date.now(),
   };
 }
 
 function getRequest(client: WebSocketClient, request: WS$RawRequest): $Values<WS$RequestTypes> {
-  if (!requests[request.method]) {
-    throw new TypeError(`Invalid Request Method ${request.method}`);
-  }
   const parsedRequest = {
     rid: getRequestID(request),
     sid: client.props.identity === request.sid ? client.props.identity : undefined,
     method: request.method,
     payload: JSON.parse(request.payload),
   };
-  // Without explicitly parsing every single possible request completely
-  // this will be near impossible to type properly.  Ignore for now
-  // $FlowFixMe
   return parsedRequest;
 }
 
@@ -88,17 +58,14 @@ function getRequest(client: WebSocketClient, request: WS$RawRequest): $Values<WS
 function verifyRequest<+R: WS$RawRequest>(client: WebSocketClient, request: R): boolean {
   if (!request || !request.method || !request.payload) {
     throw new Error(`Invalid Request Received: ${request.method}`);
-  } else if (typeof request.method !== 'string') {
+  } else if (typeof request.method !== 'string' || !hasRoute(request.method)) {
     // only allowed to send string methods and must be defined for all requests
     throw new TypeError(`Invalid Method Received: ${typeof request.method}`);
-  } else if (!client.state.connection.handshaked && request.method !== 'handshake') {
+  } else if (!client.state.handshaked && request.method !== 'handshake') {
     // before a client can do anything, they must handshake with the server
     errors.handshake(client);
     return false;
-  } else if (
-    client.state.connection.handshaked
-    && (!request.sid || request.sid !== client.props.identity)
-  ) {
+  } else if (client.state.handshaked && (!request.sid || request.sid !== client.props.identity)) {
     // when an invalid sid value is provided, the client is disconnected and the client
     // is expected to re-connect to refresh the identity
     errors.sessionID(client);
@@ -115,17 +82,23 @@ function verifyRequest<+R: WS$RawRequest>(client: WebSocketClient, request: R): 
  * @class WebSocketClient
  */
 export class WebSocketClient {
-  props: WS$ClientProps = {
-    identity: getClientSessionID(),
-    ws: undefined,
-  };
+  props: WS$ClientProps;
 
-  state: WS$ClientState;
+  state: WS$ClientState = getClientInitialState();
 
   constructor(ws: UWebSocket) {
-    this.props.ws = ws;
-    this.state = getClientInitialState(ws, this);
-    this.setIdentity('identity', this.props.identity);
+    const sock = ws._socket;
+    const { remotePort, remoteAddress } = sock;
+    const { servername } = ws.upgradeReq.connection;
+    const ip = remoteAddress ? trimLeft(remoteAddress, '::ffff:') : 'unknown';
+    this.props = {
+      identity: getClientSessionID(),
+      ip,
+      ws,
+      servername,
+      remotePort,
+    };
+    this.setIdentity();
   }
 
   /**
@@ -136,20 +109,19 @@ export class WebSocketClient {
    */
   describe = () => process.env.NODE_ENV === 'production'
     ? {
-      ip: this.state.ip,
-      servername: this.state.servername,
+      ip: this.props.ip,
+      servername: this.props.servername,
     }
     : {
       type: this.state.type,
       version: this.state.version,
       identity: this.props.identity,
-      ip: this.state.ip,
-      servername: this.state.servername,
-      identities: this.state.identities,
+      ip: this.props.ip,
+      servername: this.props.servername,
     };
 
   log = (...msgs: mixed[]) => {
-    LOG(this.describe(), ...msgs);
+    LOG(...msgs, this.describe());
   };
 
   /**
@@ -159,10 +131,9 @@ export class WebSocketClient {
   isConnected = () => {
     if (
       !this.props.ws
-      || !this.state.connection
-      || this.state.connection.disconnecting
-      || !this.state.connection.connected
-      || !this.state.connection.isAlive
+      || this.state.disconnecting
+      || !this.state.connected
+      || !this.state.isAlive
     ) {
       return false;
     }
@@ -177,18 +148,17 @@ export class WebSocketClient {
    */
   disconnect = async (code?: number, reason?: string) => {
     const { ws } = this.props;
-    const { connection } = this.state;
     if (!ws) {
       await this.handleCleanup();
       return;
     }
-    if (!connection.connected || connection.disconnecting === true) {
+    if (!this.state.connected || this.state.disconnecting === true) {
       // If we are not connected or waiting for a connection to terminate then
       // this will do nothing.  kill() should be used instead to force things
       return;
     }
     // TODO: Consider looking into redundancy check to confirm client is removed properly after timeout period.
-    connection.disconnecting = true;
+    this.state.disconnecting = true;
     ws.close(code, reason);
   };
 
@@ -200,8 +170,7 @@ export class WebSocketClient {
    */
   kill = async () => {
     const { ws } = this.props;
-    const { connection } = this.state;
-    connection.disconnecting = true;
+    this.state.disconnecting = true;
     await this.handleCleanup();
     if (!ws) {
       return;
@@ -219,7 +188,10 @@ export class WebSocketClient {
     let str: string;
 
     if (!data || !ws) {
-      LOG('[ERROR] | [WebSocket Session Send] | Session closed or empty data received: ', data);
+      this.log(
+        '[ERROR] | [WebSocket Session Send] | Session closed or empty data received: ',
+        data,
+      );
       return this;
     }
 
@@ -236,12 +208,8 @@ export class WebSocketClient {
     if (typeof str === 'string') {
       ws.send(
         str,
-        err => err
-          && LOG(
-            `! -- | ERROR Sending to: ${this.props.identity} (WebSocketSession) `,
-            err.message,
-            this.state.identities,
-          ),
+        error => error
+          && LOG('[ERROR] | A CLIENT ERROR OCCURRED DURING SEND', data, this.describe(), error),
       );
     }
 
@@ -254,7 +222,9 @@ export class WebSocketClient {
    */
   handleMessage = (msg: string) => {
     if (!msg) return;
+
     let request: $Values<WS$RequestTypes>;
+
     try {
       const rawRequest: WS$RawRequest = JSON.parse(msg);
       if (!verifyRequest(this, rawRequest)) {
@@ -264,6 +234,10 @@ export class WebSocketClient {
     } catch (e) {
       return this.handleError(e, request);
     }
+
+    /* Reset the isAlive value when valid request received */
+    this.handlePong(this.props.identity);
+
     handleRequest(
       /* Dispatch the request to be parsed */
       request,
@@ -276,11 +250,11 @@ export class WebSocketClient {
    * @memberof WebSocketClient
    */
   handleError = (error: Error, request?: $Values<WS$RequestTypes>) => {
-    console.error(
-      '[ERROR] | [WEBSOCKET] | A CLIENT ERROR OCCURRED WITH: ',
-      this.state.identities,
-      error,
+    LOG(
+      '[ERROR] | [WEBSOCKET] | A CLIENT ERROR OCCURRED DURING REQUEST',
       request,
+      this.describe(),
+      error,
     );
     const payload: WS$ErrorResponse = {
       result: 'error',
@@ -303,7 +277,7 @@ export class WebSocketClient {
    */
   handlePong = (msg?: mixed) => {
     if (msg === this.props.identity) {
-      this.state.connection.isAlive = true;
+      this.state.isAlive = true;
     }
   };
 
@@ -313,7 +287,7 @@ export class WebSocketClient {
    */
   handleClose = (/* code, reason */) => {
     this.props.ws = undefined;
-    this.state.connection.connected = false;
+    this.state.connected = false;
     this.handleCleanup();
   };
 
@@ -331,72 +305,59 @@ export class WebSocketClient {
    * Sets an identity value on the appropriate context mapping so that we
    * can handle routes for the given key when needed.
    */
-  setIdentity = (type: $Keys<WS$ClientIdentities>, identity: $Values<WS$ClientIdentities>) => {
-    switch (type) {
-      /* Only handled identities will be accepted */
-      case 'identity': {
-        break;
-      }
-      default: {
-        throw new Error(`[ERROR] | [WebSocketClient] | Invalid Set Identity Type: ${type}`);
-      }
-    }
-    this.setState({
-      identities: {
-        ...this.state.identities,
-        [type]: identity,
-      },
-    });
-    setIdentities({ [type]: identity }, this);
-    return this;
-  };
+  setIdentity = () => setIdentities(this.props.identity, this);
 
-  removeIdentity = (type: $Keys<WS$ClientIdentities>, identity: $Values<WS$ClientIdentities>) => {
-    switch (type) {
-      /* Only handled identities will be accepted */
-      case 'identity': {
-        break;
-      }
-      default: {
-        throw new Error(`[ERROR] | [WebSocketClient] | Invalid Set Identity Type: ${type}`);
-      }
-    }
-    const { [type]: removedIdentity, ...identities } = this.state.identities;
-    this.setState({
-      identities,
-    });
-    removeIdentities({ [type]: identity }, this);
-    return this;
-  };
+  /**
+   * Removes a given identity from the Application context maps and
+   * subscriptions.
+   *
+   * @memberof WebSocketClient
+   */
+  removeIdentity = () => removeIdentities(this.props.identity, this);
 
-  handleCleanup = () => {
-    if (Object.keys(this.state.identities).length === 0 && !this.props.ws) {
-      return this;
+  /**
+   * Called when the client should be cleaned up (upon disconnection or
+   * an upcoming process restart).  Cleans the client from any subscriptions
+   * or datastores.
+   *
+   * @memberof WebSocketClient
+   */
+  handleCleanup = async () => {
+    if (!this.props.ws) {
+      this.removeIdentity();
+      return;
     }
-    if (this.state.subscription) {
-      this.state.subscription.cancel();
-    }
-    removeIdentities(this.state.identities, this);
-    this.setState({
-      connection: {
-        ...this.state.connection,
+    try {
+      // Remove our identifies from any context maps.
+      this.removeIdentity();
+
+      // Cancel any PubChan Subscriptions if we have subscribed.
+      await handleCleanupClientFromRoutes(this);
+    } catch (error) {
+      LOG('An Error Occurred During Client Cleanup of Identity: ', this.describe(), error);
+    } finally {
+      // Set the state to show we have disconnected properly.
+      Object.assign(this.state, {
         isAlive: false,
         connected: false,
-      },
-      subscription: undefined,
-      identities: {},
-    });
-    this.props.ws = undefined;
-    return this;
+      });
+      this.props.ws = undefined;
+    }
   };
 
+  /**
+   * Called when the client successfully handshakes with the
+   * server.
+   *
+   * @memberof WebSocketClient
+   */
   onHandshake = (request: $ElementType<WS$RequestTypes, 'handshake'>) => {
-    this.setState({
+    Object.assign(this.state, {
+      type: request.payload.type || 'client',
       version: request.payload.version,
-      connection: {
-        ...this.state.connection,
-        handshaked: true,
-      },
+      isAlive: true,
+      connected: true,
+      handshaked: true,
     });
     this.send(response.handshake(this, request));
   };

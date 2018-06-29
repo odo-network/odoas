@@ -16,10 +16,10 @@ const responses = {
     ...commonResponseFields(client, request),
     method: 'handshake',
   }),
-  subscribeToMarket: (client, request) => Object.freeze({
-    ...commonResponseFields(client, request),
-    method: 'subscribeToMarket',
-  }),
+  // subscribeToMarket: (client, request) => Object.freeze({
+  //   ...commonResponseFields(client, request),
+  //   method: 'subscribeToMarket',
+  // }),
 };
 
 type ResponsesType = $ObjMapi<

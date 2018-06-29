@@ -1,7 +1,7 @@
 /* @flow */
-import type { WS$IdentityMaps, WS$ResponseTypes } from '../types';
-import { WebSocketClient } from './client';
-import { IdentityMaps } from '../context/maps';
+// import type { WS$IdentityMaps, WS$ResponseTypes } from '../types';
+// import { WebSocketClient } from './client';
+// import { IdentityMaps } from '../context/maps';
 
 /**
  * Broadcasts a payload to all matching clients.  If the payload has a params.route object, it will only broadcast
@@ -22,9 +22,9 @@ import { IdentityMaps } from '../context/maps';
  * @exports default
  * @param {$Values<WS$ResponseTypes>} payload
  */
-export function broadcastEvent(payload: $Values<WS$ResponseTypes>) {
-  return payload;
-}
+// export function broadcastEvent(payload: $Values<WS$ResponseTypes>) {
+//   return payload;
+// }
 
 /**
  * Takes route type and iterates through the request payload object.  Expects
@@ -33,24 +33,24 @@ export function broadcastEvent(payload: $Values<WS$ResponseTypes>) {
  * @param {$Keys<WS$IdentityMaps>} routeType
  * @param {$Values<WS$ResponseTypes>} request
  */
-export function broadcastToMatchingRoutes(
-  routeType: $Keys<WS$IdentityMaps>,
-  request: $Values<
-    $Diff<WS$ResponseTypes, {| handshake: $ElementType<WS$ResponseTypes, 'handshake'> |}>,
-  >,
-) {
-  const map = IdentityMaps[routeType];
-  if (!map) return;
-  const { payload } = request;
-  if (typeof payload === 'object') {
-    for (const route of Object.keys(payload)) {
-      const match = map.get(route);
-      const clientPayload = payload[route];
-      if (match instanceof WebSocketClient) {
-        match.send(clientPayload);
-      } else if (match) {
-        match.forEach(client => client.send(clientPayload));
-      }
-    }
-  }
-}
+// export function broadcastToMatchingRoutes(
+//   routeType: $Keys<WS$IdentityMaps>,
+//   request: $Values<
+//     $Diff<WS$ResponseTypes, {| handshake: $ElementType<WS$ResponseTypes, 'handshake'> |}>,
+//   >,
+// ) {
+//   const map = IdentityMaps[routeType];
+//   if (!map) return;
+//   const { payload } = request;
+//   if (typeof payload === 'object') {
+//     for (const route of Object.keys(payload)) {
+//       const match = map.get(route);
+//       const clientPayload = payload[route];
+//       if (match instanceof WebSocketClient) {
+//         match.send(clientPayload);
+//       } else if (match) {
+//         match.forEach(client => client.send(clientPayload));
+//       }
+//     }
+//   }
+// }

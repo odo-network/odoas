@@ -3,8 +3,14 @@ import { Server as WebSocketServer } from 'uws';
 import http from 'http';
 import type { Server as HTTPServer } from 'http';
 
+import LOG from '../utils/log';
+
 const PORT = process.env.PORT ? Number(process.env.PORT) : 9090;
 
+/**
+ * Contains the HTTP and WebSocket server
+ * along with the port we are listening on.
+ */
 export type WS$ServerDescriptor = {|
   server: HTTPServer,
   port: number,
@@ -29,7 +35,9 @@ function startServer(resolve, reject) {
   });
   return server.listen(PORT, err => {
     if (err) reject(err);
-    console.log('LISTENING ON PORT: ', PORT);
+    if (process.env.NODE_ENV !== 'production') {
+      LOG(`Listening on Port: ${PORT}`);
+    }
     resolve(({ server, port: PORT, WS }: WS$ServerDescriptor));
   });
 }

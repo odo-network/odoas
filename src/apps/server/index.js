@@ -4,6 +4,8 @@ import { getInstanceID } from './utils/identity';
 
 import startServer from './server';
 
+import { buildServerRoutes } from './routes';
+
 import registerWebSocketCallbacks from './websocket/callbacks';
 import { startWebSocketHeartbeat } from './websocket/heartbeat';
 
@@ -14,7 +16,8 @@ import './signals';
 const instanceID = getInstanceID();
 global.instanceID = instanceID;
 
-startServer()
+buildServerRoutes()
+  .then(startServer)
   .then(registerWebSocketCallbacks)
   .then(startWebSocketHeartbeat)
   .then(() => process && typeof process.send === 'function' && process.send('ready'))

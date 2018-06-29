@@ -1,7 +1,17 @@
 /* @flow */
-/** Heartbeat for the Websocket to run pings against connected clients to confirm their connectivity. */
-import { getAllClients, removeIdentities } from '../context/maps';
+import { getAllClients } from '../context/maps';
 
+/*
+  WebSocket Heartbeat is a globally running interval event which monitors for
+  unhealthy sessions which have not been responding to ping requests for a given
+  time.
+
+  Upon each ${HEATBEAT_INTERVAL}, each client is checked to see if it has
+  marked the ${state.connection.isAlive} property to "true."  If it hasn't
+  then we terminate the connection.
+
+  We ping the client at the end of each check.
+*/
 // How long should we allow a client to respond before disconnecting them?
 let HEARTBEAT_INTERVAL = 60000;
 let HEARTBEAT_ID;
@@ -9,20 +19,12 @@ let HEARTBEAT_ID;
 function heartbeat() {
   getAllClients().forEach(client => {
     const { ws, identity } = client.props;
-    const { connection, identities } = client.state;
     if (!ws) {
-      console.error('Client Persisted In IdentityMaps after Disconnect ', identity);
-      removeIdentities(
-        {
-          identity,
-          ...identities,
-        },
-        client,
-      );
-      return;
+      console.error('[ERROR] | Client Persisted In IdentityMaps after Disconnect ', identity);
+      return client.removeIdentity();
     }
-    if (connection.isAlive === false) return ws.terminate();
-    connection.isAlive = false;
+    if (client.state.isAlive === false) return ws.terminate();
+    client.state.isAlive = false;
     ws.ping(identity);
   });
 }

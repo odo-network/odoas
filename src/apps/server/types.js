@@ -1,5 +1,4 @@
 /* @flow */
-import { Subscriber } from 'pubchan';
 
 // eslint-disable-next-line import/no-cycle
 import type { WebSocketClient } from './websocket/client';
@@ -10,12 +9,6 @@ import type {
   WS$ClientSessionID as ClientSessionID,
   WS$RequestIdentity as RequestID,
 } from './utils/identity';
-
-type $StrictObject<O> = $Call<AsStrictObject, O>;
-type AsStrictObject = <O>(O) => $ExactReadOnly<$NonMaybeObject<O>>;
-type $ExactReadOnly<O> = $ReadOnly<$Exact<O>>;
-type $NonMaybeObject<O> = $Call<AsNonMaybeObject, O>;
-type AsNonMaybeObject = <O>(O) => $ObjMap<O, <T>(T) => $NonMaybeType<T>>;
 
 export type WS$InstanceIdentity = InstanceIdentity;
 export type WS$ClientSessionID = ClientSessionID;
@@ -37,7 +30,7 @@ export type WS$ErrorResponse = {|
       |},
 |};
 
-type RequestHeader = {|
+export type RequestHeader = {|
   +rid: RequestID,
   +sid: void | ClientSessionID,
 |};
@@ -54,13 +47,21 @@ export type WS$RequestTypes = {|
       +key: string,
     |},
   |},
-  subscribeToMarket: {|
-    ...$StrictObject<RequestHeader>,
-    +method: 'subscribeToMarket',
-    +payload: {|
-      +symbol: string,
-    |},
-  |},
+|};
+
+export type WS$RouteRequest<M, P> = {|
+  ...RequestHeader,
+  +method: M,
+  +payload: P,
+|};
+
+export type WS$RouteType<M, P> = {|
+  method: M,
+  validate: {
+    [payloadKey: string]: (value: *) => boolean,
+  },
+  onRequest: (request: WS$RouteRequest<M, P>, client: WebSocketClient) => Promise<*>,
+  onCleanup?: (client: WebSocketClient) => Promise<*>,
 |};
 
 export type WS$RawRequest = {|
@@ -81,9 +82,9 @@ export type WS$ResponseTypes = {|
     ...WS$ResponseHeader,
     +method: 'handshake',
   |},
-  +subscribeToMarket: {|
+  +subscribe: {|
     ...WS$ResponseHeader,
-    +method: 'subscribeToMarket',
+    +method: 'subscribe',
   |},
 |};
 
@@ -93,32 +94,21 @@ export type WS$Request = $Values<WS$RequestTypes>;
 
 export type WS$Methods = $Keys<WS$RequestTypes>;
 
-export type WS$ClientIdentities = {|
-  identity: ClientSessionID,
-  [identityType: $Keys<WS$IdentityMaps>]: ClientSessionID,
-|};
-
 export type WS$ClientProps = {|
-  identity: WS$ClientSessionID,
+  +ip: string,
+  +servername: string,
+  +remotePort: number,
+  +identity: WS$ClientSessionID,
   ws: void | UWebSocket,
 |};
 
 export type WS$ClientState = {|
-  ip: string,
-  servername: string,
   log: boolean,
   type?: string,
   version?: $ElementType<$ElementType<WS$HandshakeRequest, 'payload'>, 'version'>,
-  headers: {
-    [headerName: string]: string,
-  },
-  connection: {|
-    isAlive: boolean,
-    handshaked: boolean,
-    connected: boolean,
-    disconnecting: boolean,
-    created: number,
-  |},
-  subscription?: Subscriber,
-  identities: $Shape<WS$ClientIdentities>,
+  isAlive: boolean,
+  handshaked: boolean,
+  connected: boolean,
+  disconnecting: boolean,
+  created: number,
 |};
