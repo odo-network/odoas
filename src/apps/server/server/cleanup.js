@@ -13,6 +13,7 @@ function handleServerCleanup(): Promise<Array<void>> {
   const clients = getAllClients();
 
   LOG('Starting Server Cleanup - Total Clients: ', clients.size);
+
   // iterate our clients and remove them gracefully if possible.
   clients.forEach(client => {
     if (client.state.connected) {
@@ -28,6 +29,7 @@ function handleServerCleanup(): Promise<Array<void>> {
       promises.push(client.handleCleanup());
     }
   });
+
   return Promise.all(promises);
 }
 

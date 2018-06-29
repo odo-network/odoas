@@ -1,15 +1,17 @@
 /* @flow */
 import path from 'path';
 
-import type { WS$Request } from '../types';
+import type { WS$Request, WS$RouteType } from '../types';
 
 import type { WebSocketClient } from '../websocket/client';
 
 import { listDirectory } from '../../../utils/filesystem';
 
-const ServerRoutes = new Map();
+type WS$ServerRoutes<M: string, P: Object> = Map<M, WS$RouteType<M, P>>;
 
-const CleanupRoutes = new Set();
+const ServerRoutes: WS$ServerRoutes<*, *> = new Map();
+
+const CleanupRoutes: Set<(client: WebSocketClient) => Promise<void> | Object | void> = new Set();
 
 /**
  * Automatically parses the ./request folder and imports any requests to be
