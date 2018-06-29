@@ -42,7 +42,8 @@ cd $HOME
 git clone https://github.com/odo-network/odoas .odoas
 cd .odoas
 yarn
-yarn pm2 start app.json
+yarn build:prod
+yarn start:prod
 ```
 
 ### Deployment
