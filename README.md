@@ -23,6 +23,10 @@ Out of the box, `odoas` provides metric reporting, extensibility via ["apps"](./
 - **[nvm](https://github.com/creationix/nvm)** - Node Version Manager is used to reliably maintain the Node.js environment that will run various parts of the application.
 - **[Serverless Framework](https://www.serverless.com)** - Wherever possible, we utilize FaaS platforms.
 
+## Flow Type Coverage
+
+This project aims to be as close to 100% type coverage as possible. Unfortunately, there are certain things (try/catch blocks) that can not be type covered "properly". It has 98% at the time of writing this.
+
 ## Frequently Asked Questions
 
 - **Do all my Applications need to be Node.js?**
