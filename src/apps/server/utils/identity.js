@@ -1,7 +1,7 @@
 /* @flow */
 import shortid from 'shortid';
 
-import type { WS$RawRequest } from '../types';
+import type { WS$Request } from '../types';
 
 /**
  * Each instance (worker thread) will be assigned a unique
@@ -23,6 +23,12 @@ export opaque type WS$ClientSessionID: string = string;
 export opaque type WS$RequestIdentity: string = string;
 
 /**
+ * The API Key that the client was authenticated with
+ * during the initial handshake.
+ */
+export opaque type WS$APIKey: string = string;
+
+/**
  * Retrieve a new Instance ID
  */
 export function getInstanceID(): WS$InstanceIdentity {
@@ -36,6 +42,10 @@ export function getClientSessionID(): WS$ClientSessionID {
   return `csi:${shortid.generate()}`;
 }
 
+export function getAPIKey(key: string): WS$APIKey {
+  return key;
+}
+
 /**
  * Each payload needs a unique "rid" property to identify it and its
  * purpose.  We assign a `shortid` to them if they have not defined
@@ -45,7 +55,7 @@ export function getClientSessionID(): WS$ClientSessionID {
  * If an `rid` property is provided, we will use that.
  * @param {WS$Request} request
  */
-export function getRequestID<R: WS$RawRequest>(request: R): WS$RequestIdentity {
+export function getRequestID<R: WS$Request>(request: R): WS$RequestIdentity {
   if (!request.rid) {
     // Does not have an id property.  If it has an api key tag as an api
     // call otherwise a ui call.

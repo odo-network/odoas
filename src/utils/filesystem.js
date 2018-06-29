@@ -1,6 +1,4 @@
-import FS from 'fs';
-
-const fs = FS.promises;
+import fs from 'fs-extra';
 
 export async function listDirectory(path, re = /\.js/) {
   const contents = await fs.readdir(path);

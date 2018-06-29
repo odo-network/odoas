@@ -14,10 +14,13 @@ function getChannelID() {
 
 const route: WS$RouteType<'subscribe', RequestPayload> = {
   method: 'subscribe',
-  validate: {
-    cid: (v: void | string): boolean %checks => v === undefined || typeof v === 'string',
-    action: (v: void | 'subscribe' | 'unsubscribe' | 'clear'): boolean %checks => v === undefined || ['subscribe', 'unsubscribe', 'clear'].includes(v),
-    channel: (v: string): boolean %checks => typeof v === 'string',
+  onValidate: async function handleValidateSubscribeRequest(request, client) {
+    console.log(request, client);
+    // validate: {
+    //   cid: (v: void | string): boolean %checks => v === undefined || typeof v === 'string',
+    //   action: (v: void | 'subscribe' | 'unsubscribe' | 'clear'): boolean %checks => v === undefined || ['subscribe', 'unsubscribe', 'clear'].includes(v),
+    //   channel: (v: string): boolean %checks => typeof v === 'string',
+    // },
   },
   onRequest: async function handleSubscribeRequest(request, client) {
     console.log(client, getChannelID());

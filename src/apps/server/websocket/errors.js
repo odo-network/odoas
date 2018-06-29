@@ -3,9 +3,9 @@
 import type { WebSocketClient } from './client';
 
 const errors = {
-  apikey: client => client.disconnect(403, 'Authentication Failure'),
-  sessionID: client => client.disconnect(412, 'Session ID Mismatch'),
-  handshake: client => client.disconnect(403, 'Protocol Negotiation Failure'),
+  apikey: client => client.disconnect(1008, 'Authentication Failure'),
+  sessionID: client => client.disconnect(1008, 'Session ID Mismatch'),
+  handshake: client => client.disconnect(1008, 'Protocol Negotiation Failure'),
 };
 
 // Compose a type that matches the generally

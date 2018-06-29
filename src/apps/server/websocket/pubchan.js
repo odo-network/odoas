@@ -1,5 +1,5 @@
 /* @flow */
-import type { Subscriber } from 'pubchan';
+// import type { Subscriber } from 'pubchan';
 import createPubChan from 'pubchan';
 import type { WS$ResponseTypes } from '../types';
 import type { WebSocketClient } from './client';
@@ -45,11 +45,11 @@ export function subscribeToChannels(client: WebSocketClient, ...channels: mixed[
     throw new Error('Market Size Error');
   }
 
-  if (client.state.subscription) {
-    const prevSubscription: Subscriber = client.state.subscription;
-    // cancel previous subscription on if it exists
-    prevSubscription.cancel();
-  }
+  // if (client.state.subscription) {
+  //   const prevSubscription: Subscriber = client.state.subscription;
+  //   // cancel previous subscription on if it exists
+  //   prevSubscription.cancel();
+  // }
 
   const subscription = chan
     .subscribe()
@@ -63,7 +63,7 @@ export function subscribeToChannels(client: WebSocketClient, ...channels: mixed[
       }
     });
 
-  client.setState({ subscription });
+  // client.setState({ subscription });
 
   return subscription;
 }

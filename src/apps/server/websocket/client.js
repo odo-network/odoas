@@ -1,12 +1,14 @@
 /* @flow */
 
 import type {
-  WS$RawRequest,
   WS$ClientProps,
   WS$ClientState,
   WS$ErrorResponse,
-  WS$RequestTypes,
-  WS$ResponseTypes,
+  WS$Request,
+  WS$RouteRequest,
+  WS$Request$Handshake,
+  WS$RouteType,
+  WS$SuccessResponse,
 } from '../types';
 
 import { getClientSessionID, getRequestID } from '../utils/identity';
@@ -17,7 +19,6 @@ import LOG from '../utils/log';
 import { trimLeft } from '../utils/string';
 
 import errors from './errors';
-import response from './response';
 
 import handleRequest, { hasRoute, handleCleanupClientFromRoutes } from '../routes';
 
@@ -38,16 +39,6 @@ function getClientInitialState(): WS$ClientState {
   };
 }
 
-function getRequest(client: WebSocketClient, request: WS$RawRequest): $Values<WS$RequestTypes> {
-  const parsedRequest = {
-    rid: getRequestID(request),
-    sid: client.props.identity === request.sid ? client.props.identity : undefined,
-    method: request.method,
-    payload: JSON.parse(request.payload),
-  };
-  return parsedRequest;
-}
-
 /**
  * Whenever a request is received, we call this function once it is parsed to verify
  * that the request meets the basic expected shape of a propertly formatted request.
@@ -55,16 +46,18 @@ function getRequest(client: WebSocketClient, request: WS$RawRequest): $Values<WS
  * @throws {Error} Throws "Invalid Request Received: ${request.method}" when invalid.
  * @returns {boolean} Returns false if the request should be ignored but will handle the failure itself (do nothing).
  */
-function verifyRequest<+R: WS$RawRequest>(client: WebSocketClient, request: R): boolean {
-  if (!request || !request.method || !request.payload) {
+function verifyRequest<+R: WS$Request>(client: WebSocketClient, request: R): boolean {
+  if (!request || !request.method) {
     throw new Error(`Invalid Request Received: ${request.method}`);
-  } else if (typeof request.method !== 'string' || !hasRoute(request.method)) {
-    // only allowed to send string methods and must be defined for all requests
-    throw new TypeError(`Invalid Method Received: ${typeof request.method}`);
   } else if (!client.state.handshaked && request.method !== 'handshake') {
     // before a client can do anything, they must handshake with the server
     errors.handshake(client);
     return false;
+  } else if (typeof request.method !== 'string' || !hasRoute(request.method)) {
+    // only allowed to send string methods and must be defined for all requests
+    throw new TypeError(`Invalid Method Received: ${request.method}`);
+  } else if (!request.payload) {
+    throw new Error(`Invalid Payload for method ${request.method}`);
   } else if (client.state.handshaked && (!request.sid || request.sid !== client.props.identity)) {
     // when an invalid sid value is provided, the client is disconnected and the client
     // is expected to re-connect to refresh the identity
@@ -97,6 +90,7 @@ export class WebSocketClient {
       ws,
       servername,
       remotePort,
+      key: undefined,
     };
     this.setIdentity();
   }
@@ -183,7 +177,7 @@ export class WebSocketClient {
    * @param {Object} data
    * @memberof WebSocketClient
    */
-  send = (data: $Values<WS$ResponseTypes> | WS$ErrorResponse) => {
+  send = (data: WS$SuccessResponse | WS$ErrorResponse) => {
     const { ws } = this.props;
     let str: string;
 
@@ -223,14 +217,20 @@ export class WebSocketClient {
   handleMessage = (msg: string) => {
     if (!msg) return;
 
-    let request: $Values<WS$RequestTypes>;
+    let request: WS$Request;
 
     try {
-      const rawRequest: WS$RawRequest = JSON.parse(msg);
-      if (!verifyRequest(this, rawRequest)) {
+      request = JSON.parse(msg);
+      if (!verifyRequest(this, request)) {
         return;
       }
-      request = getRequest(this, rawRequest);
+      const rid = getRequestID(request);
+      request = {
+        rid,
+        sid: this.props.identity,
+        method: request.method,
+        payload: request.payload,
+      };
     } catch (e) {
       return this.handleError(e, request);
     }
@@ -242,14 +242,30 @@ export class WebSocketClient {
       /* Dispatch the request to be parsed */
       request,
       this,
-    ).catch((err: Error) => this.handleError(err, request));
+    ).catch((error: Error) => this.handleError(error, request));
   };
+
+  async handleResponse<M: string, P>(request: WS$RouteRequest<M, P>, route: WS$RouteType<M, P>) {
+    const response: WS$SuccessResponse = {
+      result: 'success',
+      sid: this.props.identity,
+      rid: request.rid,
+      method: request.method,
+    };
+    if (typeof route.onResponse === 'function') {
+      const payload = await route.onResponse(request, this);
+      if (typeof payload === 'object') {
+        response.payload = payload;
+      }
+    }
+    this.send(response);
+  }
 
   /**
    * Registered as the on('error') ws handler.
    * @memberof WebSocketClient
    */
-  handleError = (error: Error, request?: $Values<WS$RequestTypes>) => {
+  handleError = (error: Error, request?: WS$Request) => {
     LOG(
       '[ERROR] | [WEBSOCKET] | A CLIENT ERROR OCCURRED DURING REQUEST',
       request,
@@ -262,6 +278,9 @@ export class WebSocketClient {
         message: error.message,
       },
     };
+    if (this.state.handshaked) {
+      payload.sid = this.props.identity;
+    }
     if (request) {
       Object.assign(payload, {
         rid: request.rid,
@@ -351,15 +370,16 @@ export class WebSocketClient {
    *
    * @memberof WebSocketClient
    */
-  onHandshake = (request: $ElementType<WS$RequestTypes, 'handshake'>) => {
+  onHandshake = (request: WS$RouteRequest<'handshake', WS$Request$Handshake>) => {
+    const { payload } = request;
+    this.props.key = payload.key;
     Object.assign(this.state, {
-      type: request.payload.type || 'client',
-      version: request.payload.version,
+      type: payload.type,
+      version: payload.version,
       isAlive: true,
       connected: true,
       handshaked: true,
     });
-    this.send(response.handshake(this, request));
   };
 }
 

@@ -17,7 +17,7 @@ function handleServerCleanup(): Promise<Array<void>> {
   clients.forEach(client => {
     if (client.state.connected) {
       promises.push(
-        client.disconnect(999, 'Server Restarting').catch((e: Error) => {
+        client.disconnect(1012, 'Server Restarting').catch((e: Error) => {
           console.error('[ERROR] | During Client Cleanup of ', client.props.identity, e);
           // if an error occurs while attempting to remove the client,
           // we call kill to attempt a forced termination instead.

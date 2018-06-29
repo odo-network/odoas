@@ -1,23 +1,23 @@
 {
   presets: [
-    "@babel/preset-flow",
+    '@babel/preset-flow',
     [
-      "@babel/preset-env",
+      '@babel/preset-env',
       {
-        useBuiltIns: "usage",
+        useBuiltIns: 'usage',
         shippedProposals: true,
         targets: {
-          node: "10"
-        }
-      }
+          node: '10',
+        },
+      },
     ],
     [
-      "@babel/preset-stage-0",
+      '@babel/preset-stage-0',
       {
         useBuiltIns: true,
-        decoratorsLegacy: true
-      }
-    ]
+        decoratorsLegacy: true,
+      },
+    ],
   ],
-  plugins: ["lodash"]
+  plugins: ['dynamic-import-node', 'lodash'],
 }

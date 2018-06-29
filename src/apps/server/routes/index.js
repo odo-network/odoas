@@ -1,6 +1,7 @@
 /* @flow */
+import path from 'path';
 
-import type { WS$RequestTypes } from '../types';
+import type { WS$Request } from '../types';
 
 import type { WebSocketClient } from '../websocket/client';
 
@@ -15,10 +16,10 @@ const CleanupRoutes = new Set();
  * handled by the server.  Called when building the server.
  */
 export async function buildServerRoutes() {
-  const paths = await listDirectory('./route', /\.js/);
+  const paths = await listDirectory(path.resolve(__dirname, 'route'), /\.js/);
   const promises = [];
-  paths.forEach(path => {
-    promises.push(import(`./route/${path}`).then(m => m.default));
+  paths.forEach(p => {
+    promises.push(import(path.resolve(__dirname, 'route', p)).then(m => m.default));
   });
   if (promises.length) {
     const routes = await Promise.all(promises);
@@ -35,24 +36,10 @@ export async function buildServerRoutes() {
 }
 
 /**
- * When a route defines a "validate" key, its payload will be
- * validated by running each of its validation calls.
+ * Check to see if a given route is available.
  *
- * @param {*} route
- * @param {*} request
+ * @param {string} method
  */
-function validateRoutedRequest(route, request) {
-  const { validate } = route;
-  for (const validatePayloadKey in validate) {
-    if (
-      Object.prototype.hasOwnProperty.call(validate, validatePayloadKey)
-      && !validate[validatePayloadKey](request.payload[validatePayloadKey])
-    ) {
-      return validatePayloadKey;
-    }
-  }
-}
-
 export function hasRoute(method: string) {
   return ServerRoutes.has(method);
 }
@@ -78,21 +65,17 @@ export async function handleCleanupClientFromRoutes(client: WebSocketClient) {
   }
 }
 
-export default async function handleClientRequestRoute<
-  R: $Values<WS$RequestTypes>,
-  C: WebSocketClient,
->(request: R, client: C) {
+export default async function handleClientRequestRoute<R: WS$Request, C: WebSocketClient>(
+  request: R,
+  client: C,
+) {
   const route = ServerRoutes.get(request.method);
   if (route && route.onRequest) {
-    if (route.validate) {
-      const invalidPayloadKey = validateRoutedRequest(route, request);
-      if (invalidPayloadKey) {
-        throw new TypeError(
-          `Invalid Request Payload for ${request.method}, ${invalidPayloadKey} is not valid.`,
-        );
-      }
+    if (route.onValidate) {
+      await route.onValidate(request, client);
     }
     await route.onRequest(request, client);
+    await client.handleResponse(request, route);
   } else {
     throw new TypeError(`Invalid Request Method ${request.method}`);
   }

@@ -1,5 +1,6 @@
 /* @flow */
 import { getAllClients } from '../context/maps';
+import errors from './errors';
 
 /*
   WebSocket Heartbeat is a globally running interval event which monitors for
@@ -24,6 +25,10 @@ function heartbeat() {
       return client.removeIdentity();
     }
     if (client.state.isAlive === false) return ws.terminate();
+    if (!client.state.handshaked && Date.now() - client.state.created >= 30000) {
+      errors.handshake(client);
+      return;
+    }
     client.state.isAlive = false;
     ws.ping(identity);
   });
