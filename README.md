@@ -35,7 +35,15 @@ Nope! [pm2](http://pm2.keymetrics.io/) is capable of managing many types of appl
 
 ## Setup & Configuration
 
-> Coming Soon...
+> More Information Coming Soon...
+
+```
+cd $HOME
+git clone https://github.com/odo-network/odoas .odoas
+cd .odoas
+yarn
+yarn pm2 start app.json
+```
 
 ### Deployment
 
