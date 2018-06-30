@@ -58,7 +58,7 @@ yarn start:prod
 yarn deploy:${ODOAS_STAGE}
 ```
 
-If configured appropriately, the command above should handle the deployment, build, and running of your application.
+If configured appropriately, the command above should handle the deployment, build, and running of your application. It will push changes to your server for you and restart it so you don't have to.
 
 > Your application will be gracefully updated if possible so that your users do not experience any downtime.
 

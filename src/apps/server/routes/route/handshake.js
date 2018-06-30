@@ -39,6 +39,7 @@ const route: WS$RouteType<'handshake', WS$Request$Handshake> = {
       }
       default: {
         errors.handshake(client);
+
         break;
       }
     }

@@ -3596,9 +3596,9 @@ pseudomap@^1.0.2:
   version "1.0.2"
   resolved "https://registry.npmjs.org/pseudomap/-/pseudomap-1.0.2.tgz#f052a28da70e618917ef0a8ac34c1ae5a68286b3"
 
-pubchan@^1.6.1:
-  version "1.6.1"
-  resolved "https://registry.npmjs.org/pubchan/-/pubchan-1.6.1.tgz#60571c3aa09abca77f47e26aa1f5eaa5b466685c"
+pubchan@^1.8.0:
+  version "1.8.0"
+  resolved "https://registry.npmjs.org/pubchan/-/pubchan-1.8.0.tgz#1789b1db348cb9212f099a2729c3f7e363dc2e9d"
 
 punycode@^2.1.0:
   version "2.1.1"

@@ -21,6 +21,12 @@ export type RequestHeader = {|
   +sid: void | ClientSessionID,
 |};
 
+export type WS$Event = {|
+  sid?: ClientSessionID,
+  +event: string,
+  +payload: { [key: string]: any },
+|};
+
 export type ResponseHeader = {|
   +rid?: RequestID,
   +sid?: ClientSessionID,
@@ -50,18 +56,18 @@ export type WS$Request = {|
   +payload: Object,
 |};
 
-export type WS$RouteRequest<M, P> = {|
+export type WS$RouteRequest<+M, +P> = {|
   ...RequestHeader,
   +method: M,
   +payload: P,
 |};
 
-export type WS$RouteType<M, P> = {|
+export type WS$RouteType<M, P: Object, S: Object = Object> = {|
   method: M,
-  onValidate?: (request: WS$RouteRequest<M, P>, client: WebSocketClient) => any,
-  onRequest: (request: WS$RouteRequest<M, P>, client: WebSocketClient) => Promise<*>,
-  onCleanup?: (client: WebSocketClient) => Promise<*>,
-  onResponse?: <R: Object>(request: WS$RouteRequest<M, P>, client: WebSocketClient) => void | R,
+  onValidate?: (request: WS$RouteRequest<M, P>, client: RoutedClient<M, S>) => any,
+  onRequest: (request: WS$RouteRequest<M, P>, client: RoutedClient<M, S>) => Promise<*>,
+  onCleanup?: (client: RoutedClient<M, S>) => any,
+  onResponse?: <R: Object>(request: WS$RouteRequest<M, P>, client: RoutedClient<M, S>) => void | R,
 |};
 
 export type WS$ResponseHeader = {|
@@ -99,6 +105,7 @@ export type WS$ClientState = {|
   connected: boolean,
   disconnecting: boolean,
   created: number,
+  routes?: Map<string, Object>,
 |};
 
 export type WS$Request$Handshake = {|
@@ -106,3 +113,17 @@ export type WS$Request$Handshake = {|
   +type?: 'client',
   +key: APIKey,
 |};
+
+export interface WS$ClientWithRouteState<RM: string, RS: Object> {
+  state: {|
+    ...WS$ClientState,
+    routes?: Map<RM, RS>,
+  |};
+  setState(route: RM, state: $Shape<RS>): WebSocketClient;
+  getState(route: RM): $Shape<RS>;
+  onHandshake(request: WS$RouteRequest<'handshake', WS$Request$Handshake>): void;
+  disconnect(code: number, reason: string): Promise<void>;
+  send(payload: WS$Event | WS$SuccessResponse | WS$ErrorResponse): WS$ClientWithRouteState<RM, RS>;
+}
+
+type RoutedClient<RM, RS> = WS$ClientWithRouteState<RM, RS>;

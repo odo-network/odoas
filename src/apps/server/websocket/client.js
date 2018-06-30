@@ -5,10 +5,12 @@ import type {
   WS$ClientState,
   WS$ErrorResponse,
   WS$Request,
+  WS$Event,
   WS$RouteRequest,
   WS$Request$Handshake,
   WS$RouteType,
   WS$SuccessResponse,
+  WS$ClientWithRouteState,
 } from '../types';
 
 import { getClientSessionID, getRequestID } from '../utils/identity';
@@ -74,7 +76,7 @@ function verifyRequest<+R: WS$Request>(client: WebSocketClient, request: R): boo
  *
  * @class WebSocketClient
  */
-export class WebSocketClient {
+export class WebSocketClient implements WS$ClientWithRouteState<*, *> {
   props: WS$ClientProps;
 
   state: WS$ClientState = getClientInitialState();
@@ -151,7 +153,8 @@ export class WebSocketClient {
       // this will do nothing.  kill() should be used instead to force things
       return;
     }
-    // TODO: Consider looking into redundancy check to confirm client is removed properly after timeout period.
+    // TODO: Consider looking into redundancy check to confirm client is
+    // TODO: removed properly after timeout period.
     this.state.disconnecting = true;
     ws.close(code, reason);
   };
@@ -177,9 +180,8 @@ export class WebSocketClient {
    * @param {Object} data
    * @memberof WebSocketClient
    */
-  send = (data: WS$SuccessResponse | WS$ErrorResponse) => {
+  send = (data: WS$Event | WS$SuccessResponse | WS$ErrorResponse) => {
     const { ws } = this.props;
-    let str: string;
 
     if (!data || !ws) {
       this.log(
@@ -189,23 +191,29 @@ export class WebSocketClient {
       return this;
     }
 
+    if (this.state.handshaked && !data.sid) {
+      // since we mutate this object, we need to be sure to unset
+      // afterwords.
+      data.sid = this.props.identity;
+    }
+
+    if (data.event && !this.state.handshaked) {
+      // events are not dispatched unless handshaked although
+      // it should not be possible for a client to be subscribed
+      // to any events until handshaked
+      return this;
+    }
+
     // if (data.payload && typeof data.payload !== 'string') {
     //   data.payload = JSON.stringify(data.payload);
     // }
 
-    if (typeof data !== 'string') {
-      str = JSON.stringify(data);
-    } else {
-      str = data;
-    }
+    ws.send(
+      JSON.stringify(data),
+      error => error && LOG('[ERROR] | A CLIENT ERROR OCCURRED DURING SEND', data, this.describe(), error),
+    );
 
-    if (typeof str === 'string') {
-      ws.send(
-        str,
-        error => error
-          && LOG('[ERROR] | A CLIENT ERROR OCCURRED DURING SEND', data, this.describe(), error),
-      );
-    }
+    data.sid = undefined;
 
     return this;
   };
@@ -245,7 +253,10 @@ export class WebSocketClient {
     ).catch((error: Error) => this.handleError(error, request));
   };
 
-  async handleResponse<M: string, P>(request: WS$RouteRequest<M, P>, route: WS$RouteType<M, P>) {
+  async handleResponse<M: string, P: Object>(
+    request: WS$RouteRequest<M, P>,
+    route: WS$RouteType<*, *>,
+  ) {
     const response: WS$SuccessResponse = {
       result: 'success',
       sid: this.props.identity,
@@ -315,9 +326,28 @@ export class WebSocketClient {
    * @param {$Shape<WS$ClientState} [state={}] The state to merge into the client state.
    * @memberof WebSocketClient
    */
-  setState = (state: $Shape<WS$ClientState> = {}) => {
-    Object.assign(this.state, state);
+  setState = <R: string, S: Object>(route: R, state: $Shape<S>) => {
+    if (!route) {
+      throw new TypeError('Must Define a Route and State');
+    }
+    if (!this.state.routes) this.state.routes = new Map();
+    const { routes } = this.state;
+    const routeState = routes.get(route) || Object.create(null);
+    Object.assign(routeState, state);
+    routes.set(route, routeState);
     return this;
+  };
+
+  getState = <R: string>(route: R) => {
+    if (!route) {
+      throw new TypeError('Must Define a Route to get the state of');
+    }
+    if (!this.state.routes) this.setState(route, {});
+    const { routes } = this.state;
+    if (!routes) {
+      throw new Error('Unknown Error Occurred During getState (setState is not working properly?)');
+    }
+    return routes.get(route);
   };
 
   /**

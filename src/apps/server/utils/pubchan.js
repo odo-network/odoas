@@ -1,10 +1,12 @@
 /* @flow */
 // import type { Subscriber } from 'pubchan';
-import createPubChan from 'pubchan';
+import registry from 'pubchan/registry';
 import type { WS$ResponseTypes } from '../types';
-import type { WebSocketClient } from './client';
+import type { WebSocketClient } from '../websocket/client';
 
 const chan = createPubChan();
+
+const subscriptions = new WeakMap();
 
 /*
   Pubchan System can be utilized to allow subscriptions to specific markets rather than
@@ -40,30 +42,24 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
+function handleEmission(ref, ids, payload) {
+  if (client.isConnected()) {
+    client.send(payload);
+  } else {
+    // close the subscription if we aren't alive anymore
+    ref.subscription.cancel();
+  }
+}
+
 export function subscribeToChannels(client: WebSocketClient, ...channels: mixed[]) {
   if (!channels.length) {
     throw new Error('Market Size Error');
   }
 
-  // if (client.state.subscription) {
-  //   const prevSubscription: Subscriber = client.state.subscription;
-  //   // cancel previous subscription on if it exists
-  //   prevSubscription.cancel();
-  // }
-
   const subscription = chan
     .subscribe()
     .to(...channels)
-    .do((ref, ids, payload) => {
-      if (client.isConnected()) {
-        client.send(payload);
-      } else {
-        // close the subscription if we aren't alive anymore
-        ref.subscription.cancel();
-      }
-    });
-
-  // client.setState({ subscription });
+    .do();
 
   return subscription;
 }
